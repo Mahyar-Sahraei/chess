@@ -1,0 +1,7 @@
+{
+    "pieces_folder":"assets/chess_pieces/wikipedia/",
+    "tiles_folder":"assets/board_themes/th1/",
+    "background_file":"assets/backgrounds/wooden_bg.jpg",
+    "surf_size":[1200, 600],
+    "tile_size":100
+}
