@@ -1,5 +1,6 @@
 from enum import Enum
 from color import *
+from mvpolicy import *
 
 class PieceT(Enum):
     NONE = 0,
@@ -11,7 +12,8 @@ class PieceT(Enum):
     PAWN = 6
 
 class Piece:
-    def __init__(self, ptype=PieceT.NONE, coord=(0, 0), color=ColorT.NONE):
+    def __init__(self, policy=None, ptype=PieceT.NONE, coord=(0, 0), color=ColorT.NONE):
+        self.policy = policy
         self.ptype = ptype
         self.coord = coord
         self.color = color

@@ -3,9 +3,10 @@ import numpy as np
 
 from color import ColorT
 from piece import Piece, PieceT
+from mvpolicy import *
 
 class Tile:
-    def __init__(self, coord=(0, 0), available=False, has_piece=False, piece=Piece()):
+    def __init__(self, coord=(0, 0), available=False, has_piece=False, piece=None):
         self.coord = coord
         self.available = available
         self.has_piece = has_piece
@@ -16,7 +17,8 @@ class Tile:
                 self.color = ColorT.BLACK
             else:
                 self.color = ColorT.WHITE
-        self.piece.move(coord)
+        if self.has_piece:
+            self.piece.move(coord)
 
     def put_piece(self, piece):
         self.has_piece = True
@@ -24,10 +26,12 @@ class Tile:
         piece.move(self.coord)
 
     def pick_piece(self):
+        if not self.has_piece:
+            return None
         self.has_piece = False
-        piece = self.piece
-        self.piece = Piece()
-        return piece
+        piece_ret = self.piece
+        self.piece = None
+        return piece_ret
 
 
 
@@ -55,42 +59,44 @@ class Board:
     def ld_pieces(self, conf, color):
         pieces = []
         for king in conf['k']:
-            pieces.append(Piece(PieceT.KING, tuple(king), color))
+            pieces.append(Piece(KPolicy(self), PieceT.KING, tuple(king), color))
         for queen in conf['q']:
-            pieces.append(Piece(PieceT.QUEEN, tuple(queen), color))
+            pieces.append(Piece(QPolicy(self), PieceT.QUEEN, tuple(queen), color))
         for rook in conf['r']:
-            pieces.append(Piece(PieceT.ROOK, tuple(rook), color))
+            pieces.append(Piece(RPolicy(self), PieceT.ROOK, tuple(rook), color))
         for bishop in conf['b']:
-            pieces.append(Piece(PieceT.BISHOP, tuple(bishop), color))
+            pieces.append(Piece(BPolicy(self), PieceT.BISHOP, tuple(bishop), color))
         for knight in conf['n']:
-            pieces.append(Piece(PieceT.KNIGHT, tuple(knight), color))
+            pieces.append(Piece(NPolicy(self), PieceT.KNIGHT, tuple(knight), color))
         for pawn in conf['p']:
-            pieces.append(Piece(PieceT.PAWN, tuple(pawn), color))
+            pieces.append(Piece(PPolicy(self, tuple(conf['p_dir']), tuple(pawn)), PieceT.PAWN, tuple(pawn), color))
         return pieces
 
 
     def put_piece(self, piece, where):
         tile = self.get_tile(where)
+        if tile is None:
+            raise Exception(f'No tile at {where}')
         if tile.available:
             if not tile.has_piece:
                 tile.put_piece(piece)
             else:
-                raise Exception('Requested tile is not empty!')
+                raise Exception(f'Tile at {where} is not empty!')
         else:
-            raise Exception('Requested tile is not available!')
+            raise Exception(f'Tile at {where} is not available!')
 
-    def move_piece(self, src, dest):
+    def move_piece(self, src, dst):
         src_tile = self.get_tile(src)
-        dest_tile = self.get_tile(dest)
-        if not (src_tile.available and src_tile.has_piece):
-            raise Exception('Invalid source tile')
-        if not dest_tile.available:
-            raise Exception('Invalid source tile')
-        if dest_tile.has_piece:
-            if src_tile.piece.color == dest_tile.piece.color:
-                raise Exception('Invalid source tile')
-        piece = src_tile.pick_piece()
-        dest_tile.put_piece(piece)
+        dst_tile = self.get_tile(dst)
+        if not src_tile.has_piece:
+            return
+        piece = src_tile.piece
+        if piece.policy.can_move(src, dst):
+            piece = src_tile.pick_piece()
+            dst_tile.put_piece(piece)
 
     def get_tile(self, coord):
-        return self.tile_array[coord[0]][coord[1]]
+        try:
+            return self.tile_array[coord[0]][coord[1]]
+        except IndexError:
+            return None
