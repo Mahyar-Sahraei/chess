@@ -1,6 +1,6 @@
 import json
 import pygame
-from color import *
+from color import ColorT
 from piece import PieceT
 
 class Visualizer:
@@ -19,10 +19,10 @@ class Visualizer:
 
         pfolder = setting['pieces_folder']
         tfolder = setting['tiles_folder']
-        bgfolder = setting['background_file']
+        bgfile = setting['background_file']
         pieces = ['k', 'q', 'r', 'b', 'n', 'p']
 
-        self.background = self.load_bg(bgfolder)
+        self.background = self.load_bg(bgfile)
 
         self.white_pieces = {}
         for piece in pieces:
