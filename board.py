@@ -4,6 +4,7 @@ import numpy as np
 from color import ColorT
 from piece import Piece, PieceT
 from mvpolicy import *
+from checker import Checker
 
 class Tile:
     def __init__(self, coord=(0, 0), available=False, has_piece=False, piece=None):
@@ -39,20 +40,29 @@ class Board:
     def __init__(self, config_path):
         with open(config_path, 'r') as f:
             config = json.load(f)
-
         availability_map = np.array(config['availability'])
+
         self.height, self.width = availability_map.shape
         self.tile_array = [
                 [Tile(coord=(i, j), available=availability_map[i][j] == 1) 
                 for j in range(self.width)] 
             for i in range(self.height)
         ]
+        self.checker = Checker(self)
+        self.white_pawn_dir = tuple(config['white']['p_dir'])
+        self.black_pawn_dir = tuple(config['black']['p_dir'])
+        self.white_king = None
+        self.black_king = None
 
         wpieces = self.ld_pieces(conf=config['white'], color=ColorT.WHITE)
         for piece in wpieces:
+            if piece.ptype == PieceT.KING:
+                self.white_king = piece
             self.put_piece(piece, piece.coord)
         bpieces = self.ld_pieces(conf=config['black'], color=ColorT.BLACK)
         for piece in bpieces:
+            if piece.ptype == PieceT.KING:
+                self.black_king = piece
             self.put_piece(piece, piece.coord)
 
     
@@ -85,17 +95,40 @@ class Board:
         else:
             raise Exception(f'Tile at {where} is not available!')
 
-    def move_piece(self, src, dst):
+    def move_piece(self, src, dst, turn_color):
         src_tile = self.get_tile(src)
         dst_tile = self.get_tile(dst)
+
         if not src_tile.has_piece:
-            return
-        piece = src_tile.piece
-        if piece.policy.can_move(src, dst):
-            piece = src_tile.pick_piece()
-            dst_tile.put_piece(piece)
+            return False
+        if src_tile.piece.color != turn_color:
+            return False
+
+        src_piece = src_tile.piece
+        if src_piece.policy.can_move(src, dst):
+            src_piece = src_tile.pick_piece()
+            dst_piece = dst_tile.piece
+            dst_tile.put_piece(src_piece)
+            if turn_color == ColorT.WHITE:
+                if self.checker.is_checked(self.white_king.coord, ColorT.BLACK):
+                    src_tile.put_piece(dst_tile.pick_piece())
+                    if dst_piece is not None:
+                        dst_tile.put_piece(dst_piece)
+                    return False
+            else:
+                if self.checker.is_checked(self.black_king.coord, ColorT.WHITE):
+                    src_tile.put_piece(dst_tile.pick_piece())
+                    if dst_piece is not None:
+                        dst_tile.put_piece(dst_piece)
+                    return False
+            return True
+        
+        src_tile.put_piece(src_piece)
+        return False
 
     def get_tile(self, coord):
+        if (coord[0] < 0) or (coord[1] < 0):
+            return None
         try:
             return self.tile_array[coord[0]][coord[1]]
         except IndexError:
