@@ -13,9 +13,7 @@ def get_delta(src, dst):
 def check_src_dst(board, src, dst):
     dst_tile = board.get_tile(dst)
     src_tile = board.get_tile(src)
-    if not (src_tile.available and src_tile.has_piece):
-        return False
-    if not dst_tile.available:
+    if not (src_tile.available and dst_tile.available):
         return False
     if dst_tile.has_piece:
         if dst_tile.piece.color == src_tile.piece.color:
