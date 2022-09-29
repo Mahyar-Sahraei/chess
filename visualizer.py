@@ -1,5 +1,7 @@
 import json
 import pygame
+
+from time import sleep
 from color import ColorT
 from piece import PieceT
 
@@ -80,12 +82,13 @@ class Visualizer:
         y = y // self.tile_size
         return x, y
 
-    def render(self, coord=None):
+    def render(self, coord=None, flip=True):
         if coord is not None:
             tile = self.board.get_tile(coord)
             dest = (coord[1]*self.tile_size, coord[0]*self.tile_size)
             self.draw(tile, dest, tile.color)
-            pygame.display.flip()
+            if flip:
+                pygame.display.flip()
             return
 
         self.surf.blit(self.background, (0, 0))
@@ -94,18 +97,32 @@ class Visualizer:
                 i, j = tile.coord
                 dest = (j*self.tile_size, i*self.tile_size)
                 self.draw(tile, dest, tile.color)
-        pygame.display.flip()
+        if flip:
+            pygame.display.flip()
 
-    def render_border(self, x, y):
+    def render_border(self, x, y, color=(255, 255, 0), flip=True):
         rect = pygame.Rect(x, y, self.tile_size, self.tile_size)
-        pygame.draw.rect(self.surf, (255, 255, 0), rect, 4, 2)
-        pygame.display.flip()
+        pygame.draw.rect(self.surf, color, rect, 4, 2)
+        if flip:
+            pygame.display.flip()
+
+    def show_err(self, src, dst):
+        self.render_border(
+            src[1]*self.tile_size,
+            src[0]*self.tile_size,
+            (255, 0, 0), False)
+        self.render_border(
+            dst[1]*self.tile_size,
+            dst[0]*self.tile_size,
+            (255, 0, 0), True)
+        sleep(0.7)
 
     def start(self):
         self.render()
         select_mode = True
         selected_src = (0, 0)
         selected_dst = (0, 0)
+        turn = ColorT.WHITE
         while True:
             event = pygame.event.wait()
             if event.type == pygame.QUIT:
@@ -121,11 +138,11 @@ class Visualizer:
                         select_mode = False
                     else:
                         selected_dst = (y, x)
-                        try:
-                            self.board.move_piece(selected_src, selected_dst)
-                        except Exception as e:
-                            print(str(e))
-                        finally:
-                            self.render(selected_src)
-                            self.render(selected_dst)
-                            select_mode = True
+                        moved = self.board.move_piece(selected_src, selected_dst, turn)
+                        if moved:
+                            turn = ColorT.switch_color(turn)
+                        else:
+                            self.show_err(selected_src, selected_dst)
+                        self.render(selected_src, False)
+                        self.render(selected_dst, True)
+                        select_mode = True
